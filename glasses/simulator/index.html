@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Rokid 眼镜模拟器 — Ign</title>
+<style>
+  /* ══════════════════════════════════════════════════════════════
+     Rokid 眼镜模拟器 — Orb 形态舞台
+     图层（z-index 低→高）：
+       摄像头背景 → 其他显示框(右/全屏) → 对话显示框 → HUD状态/字幕 → Orb → 连接卡
+     对话显示框三态（由"其他显示框"驱动）：
+       无框 → 全屏；有非独占框 → 缩左侧；有独占框（电影）→ 收起
+     ══════════════════════════════════════════════════════════════ */
+  :root {
+    --bg: #05070b;
+    --glass: rgba(10, 16, 28, 0.62);
+    --glass-light: rgba(16, 26, 44, 0.78);
+    --border: rgba(255, 255, 255, 0.28);
+    --text: #d8e2f2;
+    --muted: #7a8ba3;
+    --cyan: #39d0ff;
+    --purple: #b26bff;
+    --ok: #3ddc97;
+    --danger: #ff4d6a;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+  }
+
+  /* ── 舞台 ─────────────────────────────────────────────────── */
+  #stage { position: fixed; inset: 0; }
+
+  /* 摄像头背景 */
+  #camFeed { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: brightness(0.55); z-index: 1; }
+  #camPlaceholder {
+    position: absolute; inset: 0; z-index: 1;
+    display: flex; align-items: center; justify-content: center;
+    color: #1c2733; font-family: Consolas, monospace; font-size: 14px; letter-spacing: 4px;
+  }
+
+  /* ── 其他显示框区（右侧，split 时可见） ─────────────────── */
+  #sideStage {
+    position: absolute; z-index: 2;
+    top: 0; right: 0; bottom: 0; width: 0;
+    display: flex; flex-direction: column; gap: 10px;
+    padding: 12px; overflow-y: auto;
+    transition: width 0.35s ease, opacity 0.3s ease; opacity: 0;
+  }
+  .chat-split #sideStage { width: 62%; opacity: 1; }
+  .ui-frame {
+    position: relative; flex: 1; min-height: 120px;
+    background: var(--glass-light);
+    border: 1px solid var(--border); border-radius: 14px;
+    backdrop-filter: blur(14px);
+    overflow: hidden; display: flex; flex-direction: column;
+    box-shadow: 0 0 22px rgba(57, 208, 255, 0.10);
+  }
+  .ui-frame .frame-head {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.12);
+    font-size: 12px; color: var(--cyan); letter-spacing: 1px;
+  }
+  .ui-frame .frame-body { flex: 1; padding: 10px 12px; overflow: auto; font-size: 13px; line-height: 1.6; }
+  .frame-close {
+    margin-left: 0; cursor: pointer;
+    width: 20px; height: 20px; line-height: 18px; text-align: center;
+    border: 1px solid var(--cyan); border-radius: 50%; font-size: 11px;
+    color: var(--cyan); background: rgba(0,0,0,0.4);
+  }
+  .frame-close:hover { background: rgba(57,208,255,0.2); }
+  .frame-no { color: var(--purple); font-family: Consolas, monospace; }
+  .frame-min {
+    margin-left: auto; margin-right: 6px; cursor: pointer;
+    width: 20px; height: 20px; line-height: 18px; text-align: center;
+    border: 1px solid var(--purple); border-radius: 50%; font-size: 12px;
+    color: var(--purple); background: rgba(0,0,0,0.4);
+  }
+  .frame-min:hover { background: rgba(178,107,255,0.2); }
+  .ui-frame.min { display: none; }
+
+  /* 收起帧的 Dock（右侧小胶囊，点击恢复） */
+  #frameDock {
+    position: absolute; z-index: 5; top: 56px; right: 12px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .frame-chip {
+    padding: 6px 14px; border-radius: 20px;
+    background: var(--glass-light); border: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+    color: var(--purple); font-size: 11px; font-family: Consolas, monospace;
+    cursor: pointer; letter-spacing: 1px;
+  }
+  .frame-chip:hover { border-color: var(--purple); box-shadow: 0 0 10px rgba(178,107,255,0.4); }
+
+  /* ── 独占全屏框（电影等，z 高于 chatFrame） ─────────────── */
+  #fullStage {
+    position: absolute; inset: 0; z-index: 3;
+    background: #000; display: none;
+  }
+  #fullStage.open { display: block; animation: fadeIn 0.25s ease; }
+  #fullStage video { width: 100%; height: 100%; object-fit: contain; }
+  #fullStageTitle {
+    position: absolute; top: 14px; left: 18px; z-index: 2;
+    font-size: 12px; color: var(--cyan); letter-spacing: 2px;
+    text-shadow: 0 0 8px rgba(57,208,255,0.8);
+  }
+  #btnCloseFull {
+    position: absolute; top: 12px; right: 16px; z-index: 2;
+    width: 34px; height: 34px; line-height: 30px; text-align: center;
+    border: 1px solid var(--cyan); border-radius: 50%;
+    color: var(--cyan); font-size: 16px; cursor: pointer;
+    background: rgba(0,0,0,0.5);
+  }
+  #btnCloseFull:hover { background: rgba(57,208,255,0.25); }
+  #btnMinFull {
+    position: absolute; top: 12px; right: 58px; z-index: 2;
+    width: 34px; height: 34px; line-height: 30px; text-align: center;
+    border: 1px solid var(--purple); border-radius: 50%;
+    color: var(--purple); font-size: 15px; cursor: pointer;
+    background: rgba(0,0,0,0.5);
+  }
+  #btnMinFull:hover { background: rgba(178,107,255,0.25); }
+  #fullBody {
+    position: absolute; inset: 0; display: none; overflow: auto;
+    padding: 56px 24px 24px; font-size: 14px; line-height: 1.7;
+  }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  /* ── 对话显示框（三态） ─────────────────────────────────── */
+  #chatFrame {
+    position: absolute; z-index: 4;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: flex; flex-direction: column;
+    background: var(--glass);
+    border: 1px solid var(--border);
+    backdrop-filter: blur(16px);
+    transition: left 0.35s ease, width 0.35s ease, opacity 0.3s ease, transform 0.35s ease;
+    overflow: hidden;
+  }
+  /* 无其他框 → 全屏 */
+  .chat-fullscreen #chatFrame { left: 0; width: 100%; opacity: 1; transform: none; }
+  /* 有非独占框 → 缩到左侧 */
+  .chat-split #chatFrame { left: 0; width: 38%; border-right: 1px solid var(--border); }
+  /* 有独占框 → 收起 */
+  .chat-collapsed #chatFrame { transform: translateX(-104%); opacity: 0; pointer-events: none; }
+
+  #chatHead {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 16px; border-bottom: 1px solid rgba(255,255,255,0.12);
+    font-size: 11px; color: var(--muted); letter-spacing: 2px;
+  }
+  #chatLog {
+    flex: 1; overflow-y: auto; padding: 14px 16px 90px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  #chatHint {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    text-align: center; color: var(--muted); font-size: 13px; letter-spacing: 2px;
+    pointer-events: none;
+  }
+  .bubble { max-width: 86%; padding: 8px 12px; border-radius: 10px; font-size: 13px; line-height: 1.6; word-break: break-all; }
+  .bubble.user { align-self: flex-end; background: rgba(57,208,255,0.14); border: 1px solid rgba(57,208,255,0.4); }
+  .bubble.assistant { align-self: flex-start; background: rgba(178,107,255,0.12); border: 1px solid rgba(178,107,255,0.35); }
+
+  /* ── HUD：状态条 + 字幕（chatFrame 收起时仍可见） ───────── */
+  #hudStatus {
+    position: absolute; z-index: 5; left: 16px; bottom: 14px;
+    font-family: Consolas, monospace; font-size: 11px; color: var(--cyan);
+    text-shadow: 0 0 6px rgba(57,208,255,0.9);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60%;
+  }
+  #connBadge {
+    position: absolute; z-index: 5; top: 12px; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 8px;
+    padding: 4px 14px; border-radius: 20px;
+    background: rgba(0,0,0,0.45); border: 1px solid rgba(255,255,255,0.15);
+    font-family: Consolas, monospace; font-size: 11px; color: var(--muted);
+    cursor: pointer; user-select: none;
+  }
+  #connBadge .dot { width: 8px; height: 8px; border-radius: 50%; background: #555; }
+  #connBadge.on .dot { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+  #connBadge.err .dot { background: var(--danger); box-shadow: 0 0 8px var(--danger); }
+
+  /* ── 设置入口（右上角 ⚙） ───────────────────────────────── */
+  #btnSettings {
+    position: absolute; z-index: 5; top: 12px; right: 14px;
+    width: 30px; height: 30px; border-radius: 50%;
+    border: 1px solid var(--border);
+    background: rgba(0,0,0,0.45); color: var(--muted);
+    font-size: 15px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(8px);
+  }
+  #btnSettings:hover { border-color: var(--cyan); color: var(--cyan); box-shadow: 0 0 10px rgba(57,208,255,0.35); }
+
+  /* ── Orb（始终最上层） ───────────────────────────────────── */
+  #orb { position: absolute; z-index: 6; bottom: 26px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  #orbBall {
+    width: 76px; height: 76px; border-radius: 50%;
+    background: radial-gradient(circle at 32% 28%, rgba(120,225,255,0.95), rgba(57,208,255,0.55) 38%, rgba(178,107,255,0.5) 72%, rgba(178,107,255,0.15));
+    box-shadow:
+      0 0 18px rgba(57,208,255,0.55),
+      0 0 46px rgba(178,107,255,0.35),
+      inset -6px -8px 18px rgba(0,0,0,0.45);
+    border: 1px solid rgba(255,255,255,0.5);
+    cursor: pointer;
+    animation: orbPulse 3.2s ease-in-out infinite;
+    transition: transform 0.2s ease;
+  }
+  #orbBall:hover { transform: scale(1.08); }
+  @keyframes orbPulse {
+    0%, 100% { box-shadow: 0 0 18px rgba(57,208,255,0.55), 0 0 46px rgba(178,107,255,0.35), inset -6px -8px 18px rgba(0,0,0,0.45); }
+    50% { box-shadow: 0 0 30px rgba(57,208,255,0.85), 0 0 70px rgba(178,107,255,0.55), inset -6px -8px 18px rgba(0,0,0,0.45); }
+  }
+  /* orb 展开的输入面板 */
+  #orbPanel {
+    display: none; width: 440px; max-width: 92vw;
+    flex-direction: column; gap: 10px;
+    padding: 14px;
+    background: var(--glass-light);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    backdrop-filter: blur(18px);
+    box-shadow: 0 0 30px rgba(57,208,255,0.18);
+  }
+  #orb.expanded #orbPanel { display: flex; animation: panelUp 0.22s ease; }
+  #orb.expanded #orbBall { animation-play-state: paused; box-shadow: 0 0 34px rgba(57,208,255,0.9), 0 0 80px rgba(178,107,255,0.6), inset -6px -8px 18px rgba(0,0,0,0.45); }
+  @keyframes panelUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+  .orb-row { display: flex; align-items: center; gap: 10px; }
+  #orbInput {
+    flex: 1; padding: 10px 14px;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.22); border-radius: 24px;
+    color: var(--text); font-size: 14px; outline: none;
+  }
+  #orbInput:focus { border-color: var(--cyan); box-shadow: 0 0 10px rgba(57,208,255,0.35); }
+  #orbInput.live { opacity: 0.65; color: var(--muted); }
+  .orb-btn {
+    flex: none; width: 42px; height: 42px; border-radius: 50%;
+    border: 1px solid var(--cyan); background: rgba(57,208,255,0.10);
+    color: var(--cyan); font-size: 17px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .orb-btn:hover { background: rgba(57,208,255,0.24); }
+  .orb-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  #orbSend {
+    flex: none; padding: 0 20px; height: 42px; border-radius: 24px;
+    border: 1px solid var(--cyan); background: rgba(57,208,255,0.12);
+    color: var(--cyan); font-size: 14px; letter-spacing: 2px; cursor: pointer;
+  }
+  #orbSend:hover { background: rgba(57,208,255,0.26); }
+  #orbSend:disabled { opacity: 0.35; cursor: not-allowed; }
+  #orbHint { font-size: 11px; color: var(--muted); letter-spacing: 1px; text-align: center; min-height: 14px; }
+
+  /* 聆听状态波形 */
+  #waveRow { display: none; align-items: center; justify-content: center; gap: 5px; height: 26px; }
+  #orb.listening #waveRow { display: flex; }
+  #orb.listening #orbHint { color: var(--danger); }
+  #orb.listening #orbInput { opacity: 0.4; }
+  .wave-bar { width: 4px; height: 8px; border-radius: 2px; background: var(--danger); animation: wave 0.9s ease-in-out infinite; }
+  .wave-bar:nth-child(2) { animation-delay: 0.1s; } .wave-bar:nth-child(3) { animation-delay: 0.2s; }
+  .wave-bar:nth-child(4) { animation-delay: 0.3s; } .wave-bar:nth-child(5) { animation-delay: 0.4s; }
+  .wave-bar:nth-child(6) { animation-delay: 0.5s; } .wave-bar:nth-child(7) { animation-delay: 0.6s; }
+  .wave-bar:nth-child(8) { animation-delay: 0.7s; } .wave-bar:nth-child(9) { animation-delay: 0.8s; }
+  @keyframes wave { 0%, 100% { height: 6px; } 50% { height: 24px; } }
+
+  /* ── 连接卡片（初始 overlay，z 最高） ───────────────────── */
+  #connectCard {
+    position: absolute; z-index: 7; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 360px; padding: 22px;
+    background: var(--glass-light);
+    border: 1px solid var(--border); border-radius: 16px;
+    backdrop-filter: blur(20px);
+    box-shadow: 0 0 40px rgba(57,208,255,0.15);
+    display: flex; flex-direction: column; gap: 12px;
+    transition: opacity 0.4s ease, transform 0.4s ease;
+  }
+  #connectCard.hidden { opacity: 0; pointer-events: none; transform: translate(-50%, -46%); }
+  #connectCard h2 { font-size: 13px; color: var(--cyan); letter-spacing: 3px; text-align: center; }
+  #connectCard label { font-size: 11px; color: var(--muted); letter-spacing: 1px; margin-top: 2px; }
+  #connectCard input {
+    padding: 8px 12px; background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.2); border-radius: 8px;
+    color: var(--text); font-family: Consolas, monospace; font-size: 13px; outline: none;
+  }
+  #connectCard input:focus { border-color: var(--cyan); }
+  #connectCard .row { display: flex; gap: 8px; }
+  #connectCard .row input:first-child { flex: 1; }
+  #btnConnect {
+    margin-top: 6px; padding: 10px;
+    border: 1px solid var(--cyan); border-radius: 8px;
+    background: rgba(57,208,255,0.12); color: var(--cyan);
+    font-size: 14px; letter-spacing: 3px; cursor: pointer;
+  }
+  #btnConnect:hover { background: rgba(57,208,255,0.26); }
+  #connectError { font-size: 11px; color: var(--danger); font-family: Consolas, monospace; min-height: 14px; text-align: center; }
+  #nameHint { font-size: 10px; color: var(--muted); margin-top: 4px; }
+
+  /* ── STT 设置卡（语音识别 LLM——存 Server 端，眼镜端不落盘） ── */
+  #sttCard {
+    position: absolute; z-index: 7; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 360px; padding: 22px;
+    background: var(--glass-light);
+    border: 1px solid var(--border); border-radius: 16px;
+    backdrop-filter: blur(20px);
+    box-shadow: 0 0 40px rgba(178,107,255,0.18);
+    display: flex; flex-direction: column; gap: 12px;
+    transition: opacity 0.4s ease, transform 0.4s ease;
+  }
+  #sttCard.hidden { opacity: 0; pointer-events: none; transform: translate(-50%, -46%); }
+  #sttCard h2 { font-size: 13px; color: var(--purple); letter-spacing: 3px; text-align: center; }
+  #sttCard label { font-size: 11px; color: var(--muted); letter-spacing: 1px; margin-top: 2px; }
+  #sttCard input {
+    padding: 8px 12px; background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.2); border-radius: 8px;
+    color: var(--text); font-family: Consolas, monospace; font-size: 13px; outline: none;
+  }
+  #sttCard input:focus { border-color: var(--purple); }
+  #sttNote { font-size: 10px; color: var(--muted); line-height: 1.6; }
+  #sttMsg { font-size: 11px; font-family: Consolas, monospace; min-height: 14px; text-align: center; color: var(--muted); }
+  #sttCard .row { display: flex; gap: 8px; }
+  #sttCard .row button { flex: 1; padding: 10px; border-radius: 8px; cursor: pointer; font-size: 13px; letter-spacing: 2px; }
+  #btnSttSave {
+    border: 1px solid var(--purple); background: rgba(178,107,255,0.12); color: var(--purple);
+  }
+  #btnSttSave:hover { background: rgba(178,107,255,0.26); }
+  #btnSttClose {
+    border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.05); color: var(--muted);
+  }
+  #btnSttClose:hover { color: var(--text); }
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <!-- 摄像头背景 -->
+  <video id="camFeed" autoplay muted playsinline></video>
+  <div id="camPlaceholder">CAMERA FEED</div>
+
+  <!-- 其他显示框（右侧 / 非独占） -->
+  <div id="sideStage"></div>
+  <!-- 收起帧的 Dock -->
+  <div id="frameDock"></div>
+
+  <!-- 独占全屏框（电影等） -->
+  <div id="fullStage">
+    <div id="fullStageTitle"></div>
+    <span id="btnMinFull" title="收起">—</span>
+    <span id="btnCloseFull" title="关闭">✕</span>
+    <video id="videoPlayer" autoplay controls playsinline></video>
+    <div id="fullBody"></div>
+  </div>
+
+  <!-- 对话显示框 -->
+  <div id="chatFrame">
+    <div id="chatHead">◈ 对话 — 眼镜</div>
+    <div id="chatHint">说点什么，或点击 Orb 开始<br /><span style="font-size:11px;color:#4a5a72">语音实时识别，结果确认后再发送</span></div>
+    <div id="chatLog"></div>
+  </div>
+
+  <!-- HUD -->
+  <div id="connBadge"><span class="dot"></span><span id="badgeText">未连接</span></div>
+  <button id="btnSettings" title="语音识别 LLM 配置">⚙</button>
+  <div id="hudStatus"></div>
+
+  <!-- Orb（始终最上层） -->
+  <div id="orb">
+    <div id="orbBall" title="点击说话"></div>
+    <div id="orbPanel">
+      <div class="orb-row">
+        <button class="orb-btn" id="btnVoice" title="语音输入（录音 → Server 识别）">🎤</button>
+        <input type="text" id="orbInput" placeholder="输入内容，或点击 🎤 说话…" />
+        <button id="orbSend">发送</button>
+      </div>
+      <div id="waveRow">
+        <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+        <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+        <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+      </div>
+      <div id="orbHint">Esc / 点击空白收起</div>
+    </div>
+  </div>
+
+  <!-- 登录卡片：check-name → /auth/login → 落盘 → WS（对齐桌面端登录流程） -->
+  <div id="connectCard">
+    <h2>ROKID 模拟器 · 登录</h2>
+    <label>Server Host / Port</label>
+    <div class="row">
+      <input id="host" value="127.0.0.1" />
+      <input id="port" value="7017" style="width:80px" />
+    </div>
+    <label>设备名（在线设备间唯一）</label>
+    <input id="deviceName" value="眼镜" />
+    <div id="nameHint">设备名不能重复——与其他在线设备同名将无法连接</div>
+    <label>账号</label>
+    <input id="username" placeholder="Username" autocomplete="username" />
+    <label>密码</label>
+    <input id="password" type="password" placeholder="Password" autocomplete="current-password" />
+    <label style="color:#4a5a72">uuid（自动生成，无需关心）</label>
+    <input id="uuidText" readonly style="opacity:0.6" />
+    <div id="connectError"></div>
+    <button id="btnConnect">登 录</button>
+  </div>
+
+  <!-- STT 设置卡：语音识别 LLM 配置——与文本 LLM 分开，同样保存在 Server 端；
+       眼镜端不落盘，打开时直接从后端读取 -->
+  <div id="sttCard" class="hidden">
+    <h2>⚙ 语音识别 LLM</h2>
+    <div id="sttNote">语音识别经 Server 中转（配置存 Server 数据库）：本页 ⚙ 或桌面端 Settings 均可配置，保存后实时识别由 Server 读取。</div>
+    <label>API URL（OpenAI 兼容）</label>
+    <input id="sttUrl" placeholder="wss://…/api-ws/v1/inference" />
+    <label>API Key</label>
+    <input id="sttKey" type="password" placeholder="sk-..." />
+    <label>Model</label>
+    <input id="sttModel" placeholder="e.g. whisper-1" />
+    <div id="sttMsg"></div>
+    <div class="row">
+      <button id="btnSttSave">保 存</button>
+      <button id="btnSttClose">关 闭</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   Rokid 眼镜模拟器 — 协议与桌面客户端一致（Ign Server WS v1）
+   WS:  ping/pong 心跳 · chat_send 说话 · push{message,status,tool_exec,ui}
+   STT: 实时增量转录（直连 provider，CORS 不通降级 Server 中转）→ 输入框 → 确认后发送
+   ══════════════════════════════════════════════════════════════ */
+const $ = (id) => document.getElementById(id);
+const stage = $('stage');
+
+// ── 设备身份 ────────────────────────────────────────────────
+function simUuid() {
+  const key = 'glasses-sim-uuid';
+  let v = localStorage.getItem(key);
+  if (!v) {
+    v = (crypto.randomUUID?.() ?? `g-${Date.now().toString(36)}`);
+    localStorage.setItem(key, v);
+  }
+  return v;
+}
+$('uuidText').value = simUuid();
+
+// ── WS ───────────────────────────────────────────────────────
+let ws = null;
+
+function badge(text, kind) {  // kind: '' | 'on' | 'err'
+  $('badgeText').textContent = text;
+  $('connBadge').className = kind ? kind : '';
+}
+function send(obj) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ msg_id: newMsgId(), ...obj }));
+  }
+}
+function newMsgId() {
+  return (crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36)}`).replace(/-/g, '').slice(0, 12);
+}
+
+// ── 本地配置（localStorage，对应桌面端 settings.json 落盘） ──
+const SETTINGS_KEY = 'glasses-sim-settings';
+function loadSettings() {
+  try { return JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {}; } catch { return {}; }
+}
+function saveSettings(partial) {
+  const s = loadSettings();
+  Object.assign(s, partial);
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+}
+function hasToken() { return !!loadSettings().token; }
+
+// ── 重连（与桌面端 ws.ts 同款：指数退避 1s→2s→…→30s） ──────
+const RECONNECT_BASE = 1000;
+const RECONNECT_CAP = 30000;
+let retries = 0;
+
+function scheduleReconnect() {
+  if (!hasToken()) return;  // 没登录过 → 不自动重连，等用户登录
+  const delay = Math.min(RECONNECT_BASE * Math.pow(2, retries), RECONNECT_CAP);
+  retries++;
+  badge(`已断开 · ${(delay / 1000).toFixed(0)}s 后重连`, 'err');
+  setTimeout(() => { if (!ws) connect(); }, delay);
+}
+
+function connect() {
+  if (ws) return;
+  const host = $('host').value.trim() || '127.0.0.1';
+  const port = $('port').value.trim() || '7017';
+  const name = $('deviceName').value.trim() || '眼镜';
+  const url = `ws://${host}:${port}/Ign/v1/ws`
+    + `?client_type=glasses&client_os=yodaos`
+    + `&device_uuid=${encodeURIComponent(simUuid())}`
+    + `&device_name=${encodeURIComponent(name)}`;
+  try {
+    ws = new WebSocket(url);
+  } catch (err) {
+    scheduleReconnect();  // 建连失败同样走重连
+    return;
+  }
+
+  ws.onopen = () => {
+    retries = 0;
+    $('connectCard').classList.add('hidden');
+    badge(`${name} · 在线`, 'on');
+    setStatus('已连接 Ign Server');
+    startHeartbeat();
+  };
+  ws.onmessage = (e) => {
+    let msg;
+    try { msg = JSON.parse(e.data); } catch { return; }
+    if (msg.type === 'pong') { refreshHbTimeout(); return; }
+    if (msg.type === 'push') handlePush(msg.payload || {});
+  };
+  ws.onclose = (e) => {
+    stopHeartbeat();
+    ws = null;
+    if (e.code === 4001) {
+      // 设备名被占用 → 重连必被再拒，不重试；等用户改名后重新登录
+      badge('设备名被占用', 'err');
+      $('connectCard').classList.remove('hidden');
+      $('connectError').textContent = '设备名已被其他在线设备占用，请改名后重新登录';
+    } else {
+      scheduleReconnect();
+    }
+  };
+}
+
+// ── 心跳：30s ping + 60s 无 pong 判死（close 3001 → 走重连） ──
+const HEARTBEAT_INTERVAL = 30000;
+const HEARTBEAT_TIMEOUT = 60000;
+let hbTimer = null;
+let hbTimeout = null;
+function startHeartbeat() {
+  stopHeartbeat();
+  hbTimer = setInterval(() => send({ type: 'ping', target: 'glasses', payload: {} }), HEARTBEAT_INTERVAL);
+  refreshHbTimeout();
+}
+function stopHeartbeat() {
+  if (hbTimer) { clearInterval(hbTimer); hbTimer = null; }
+  if (hbTimeout) { clearTimeout(hbTimeout); hbTimeout = null; }
+}
+function refreshHbTimeout() {
+  if (hbTimeout) clearTimeout(hbTimeout);
+  hbTimeout = setTimeout(() => { if (ws) ws.close(3001); }, HEARTBEAT_TIMEOUT);
+}
+
+// ── 登录流程（对齐桌面端 LoginPanel）：check-name → login → 落盘 → WS ──
+function connectError(text) { $('connectError').textContent = text; }
+
+async function doLogin() {
+  const host = $('host').value.trim() || '127.0.0.1';
+  const port = $('port').value.trim() || '7017';
+  const name = $('deviceName').value.trim();
+  const user = $('username').value.trim();
+  const pass = $('password').value;
+  if (!name) return connectError('请命名本设备');
+  if (!user || !pass) return connectError('请填写账号密码');
+  connectError('');
+
+  // 1. 设备名占用检查（带本机 uuid：自己旧连接占用的名字放行）
+  try {
+    const res = await fetch(`http://${host}:${port}/Ign/v1/devices/check-name?name=${encodeURIComponent(name)}&exclude_uuid=${encodeURIComponent(simUuid())}`);
+    const body = await res.json();
+    if (!body.available) return connectError(`设备名"${name}"已被其他在线设备占用，请改名`);
+  } catch { /* server 不可达——下面的登录请求会报错 */ }
+
+  // 2. 登录拿 token
+  try {
+    const res = await fetch(`http://${host}:${port}/Ign/v1/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: user, password: pass }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.detail || `HTTP ${res.status}`);
+    saveSettings({ host, port: Number(port), deviceName: name, username: user, token: body.access_token });
+  } catch (err) {
+    return connectError(`登录失败: ${err.message}`);
+  }
+
+  // 3. 建 WS（此后断线自动重连）
+  connect();
+}
+$('btnConnect').onclick = doLogin;
+// 双击顶部徽章可重新打开登录卡
+$('connBadge').ondblclick = () => { $('connectCard').classList.remove('hidden'); };
+
+// ── 启动：读落盘配置回填；有 token 则自动连接（对应桌面端自动登录） ──
+(function init() {
+  const s = loadSettings();
+  if (s.host) $('host').value = s.host;
+  if (s.port) $('port').value = String(s.port);
+  if (s.deviceName) $('deviceName').value = s.deviceName;
+  if (s.username) $('username').value = s.username;
+  if (s.token) {
+    $('connectCard').classList.add('hidden');
+    badge('连接中…');
+    connect();
+  }
+})();
+
+// ── 帧管理：编号 + 收起/恢复 ────────────────────────────────
+// frames: [{ id, no, title, exclusive, kind, html }]  kind: 'ui' | 'video'
+// 每个 dialog 有编号（#1、#2…）和收起入口（—）；收起后进右侧 Dock
+// 成小胶囊，点击恢复。独占槽（全屏）同时只显示一个：当前独占 dialog
+// 销毁后，最近收起的独占 dialog 自动重新展开。
+const frames = [];
+let frameNo = 0;
+let activeFullId = null;          // 当前显示在 fullStage 的帧 id
+const collapsedFullStack = [];    // 收起的独占帧栈（后收起的先恢复）
+
+function nextNo() { return ++frameNo; }
+
+function recomputeLayout() {
+  stage.classList.remove('chat-fullscreen', 'chat-split', 'chat-collapsed');
+  const active = frames.filter(f => !f.collapsed);
+  if (active.some(f => f.exclusive)) stage.classList.add('chat-collapsed');
+  else if (active.length > 0) stage.classList.add('chat-split');
+  else stage.classList.add('chat-fullscreen');
+}
+
+function showFull(f) {
+  // 独占槽单占：已有其他独占帧在显示 → 先收起它
+  const prev = frames.find(x => x.exclusive && !x.collapsed && x.id !== f.id);
+  if (prev) collapseFrame(prev.id);
+  activeFullId = f.id;
+  $('fullStageTitle').textContent = `#${f.no} ${f.title}`;
+  if (f.kind === 'video') {
+    $('videoPlayer').style.display = 'block';
+    $('fullBody').style.display = 'none';
+  } else {
+    $('videoPlayer').style.display = 'none';
+    $('fullBody').style.display = 'block';
+    $('fullBody').innerHTML = f.html || '';
+  }
+  $('fullStage').classList.add('open');
+  recomputeLayout();
+}
+function hideFull() {
+  activeFullId = null;
+  const v = $('videoPlayer');
+  v.pause(); v.removeAttribute('src'); v.load();
+  $('fullBody').innerHTML = '';
+  $('fullStage').classList.remove('open');
+  recomputeLayout();
+}
+
+function dockAdd(f) {
+  const chip = document.createElement('div');
+  chip.className = 'frame-chip';
+  chip.id = 'chip-' + f.id;
+  chip.textContent = `#${f.no} ${f.title}`;
+  chip.onclick = () => restoreFrame(f.id);
+  $('frameDock').appendChild(chip);
+}
+function dockRemove(id) { document.getElementById('chip-' + id)?.remove(); }
+
+function collapseFrame(id) {
+  const f = frames.find(x => x.id === id);
+  if (!f || f.collapsed) return;
+  f.collapsed = true;
+  if (f.exclusive) {
+    if (activeFullId === id) {
+      $('videoPlayer').pause();
+      $('fullStage').classList.remove('open');
+      activeFullId = null;
+    }
+    collapsedFullStack.push(id);
+  } else {
+    document.getElementById('frame-' + id)?.classList.add('min');
+  }
+  dockAdd(f);
+  recomputeLayout();
+}
+function restoreFrame(id) {
+  const f = frames.find(x => x.id === id);
+  if (!f || !f.collapsed) return;
+  f.collapsed = false;
+  dockRemove(id);
+  const si = collapsedFullStack.indexOf(id);
+  if (si >= 0) collapsedFullStack.splice(si, 1);
+  if (f.exclusive) {
+    showFull(f);
+    if (f.kind === 'video') $('videoPlayer').play().catch(() => {});
+  } else {
+    document.getElementById('frame-' + id)?.classList.remove('min');
+  }
+  recomputeLayout();
+}
+
+function removeFrame(id) {
+  const i = frames.findIndex(f => f.id === id);
+  if (i < 0) return;
+  const f = frames[i];
+  frames.splice(i, 1);
+  dockRemove(id);
+  const si = collapsedFullStack.indexOf(id);
+  if (si >= 0) collapsedFullStack.splice(si, 1);
+  if (activeFullId === id) {
+    hideFull();
+    // 当前 dialog 销毁 → 最近收起的独占 dialog 自动重新展开
+    const back = collapsedFullStack.pop();
+    if (back) restoreFrame(back);
+  }
+  if (f.kind === 'ui' && !f.exclusive) {
+    document.getElementById('frame-' + id)?.remove();
+  }
+  recomputeLayout();
+}
+
+// ui 帧（后端 ui 通道）
+function renderUiFrame(ui) {
+  if (!ui || !ui.id) return;
+  if (frames.some(f => f.id === ui.id)) removeFrame(ui.id);  // 同 id 覆盖
+  const f = { id: ui.id, no: nextNo(), title: ui.title || 'UI', exclusive: !!ui.exclusive, kind: 'ui', html: ui.html || '', collapsed: false };
+  frames.push(f);
+  if (f.exclusive) {
+    showFull(f);
+  } else {
+    const el = document.createElement('div');
+    el.id = 'frame-' + ui.id;
+    el.className = 'ui-frame';
+    el.innerHTML = `<div class="frame-head"><span class="frame-no">#${f.no}</span><span>◈ ${f.title}</span>`
+      + `<span class="frame-min" title="收起">—</span><span class="frame-close" title="关闭">✕</span></div>`
+      + `<div class="frame-body">${f.html}</div>`;
+    el.querySelector('.frame-min').onclick = () => collapseFrame(ui.id);
+    el.querySelector('.frame-close').onclick = () => removeFrame(ui.id);
+    $('sideStage').appendChild(el);
+  }
+  recomputeLayout();
+}
+
+// video 帧（play_video → 独占全屏）
+function renderVideoFrame(callId, src) {
+  const f = { id: 'video-' + callId, no: nextNo(), title: '播放视频', exclusive: true, kind: 'video', html: '', collapsed: false };
+  frames.push(f);
+  $('videoPlayer').src = src;
+  showFull(f);
+  $('videoPlayer').play().catch(() => {});
+}
+$('btnCloseFull').onclick = () => { if (activeFullId) removeFrame(activeFullId); };
+$('btnMinFull').onclick = () => { if (activeFullId) collapseFrame(activeFullId); };
+
+// ── push 分发（一回合一个 JSON：message/tool_exec/status/ui） ──
+function addChat(role, content) {
+  $('chatHint').style.display = 'none';
+  const div = document.createElement('div');
+  div.className = 'bubble ' + role;
+  div.textContent = content;
+  $('chatLog').appendChild(div);
+  $('chatLog').scrollTop = $('chatLog').scrollHeight;
+}
+
+function handlePush(p) {
+  if (p.status !== undefined && p.status !== '') setStatus(p.status);
+  if (p.message) {
+    addChat('assistant', p.message);
+  }
+  if (p.ui) renderUiFrame(p.ui);
+  if (p.tool_exec) executeTool(p.tool_exec);
+}
+function setStatus(text) {
+  $('hudStatus').textContent = text;
+  $('hudStatus').style.display = text ? 'block' : 'none';
+}
+
+// ── tool_exec 执行器（眼镜端能力：play_video） ──────────────
+function executeTool(te) {
+  const callId = te.call_id;
+  if (!te || te.type === 'parallel') {
+    send({ type: 'tool_result', target: 'glasses', payload: { call_id: callId, result: { ok: false, error: 'parallel 或未知格式，眼镜端不支持' } } });
+    return;
+  }
+  if (te.tool !== 'play_video') {
+    send({ type: 'tool_result', target: 'glasses', payload: { call_id: callId, result: { ok: false, error: `眼镜端无工具: ${te.tool}` } } });
+    return;
+  }
+  const src = te.params?.src || '';
+  if (!src) {
+    send({ type: 'tool_result', target: 'glasses', payload: { call_id: callId, result: { ok: false, src, status: 'error', error: 'src 为空' } } });
+    return;
+  }
+  renderVideoFrame(callId, src);  // 独占全屏 → 对话显示框收起
+  send({ type: 'tool_result', target: 'glasses', payload: { call_id: callId, result: { ok: true, src, status: 'playing' } } });
+}
+
+// ── chat_send ────────────────────────────────────────────────
+function sendChat() {
+  const text = $('orbInput').value.trim();
+  if (!text || !ws || recording) return;
+  addChat('user', text);
+  $('orbInput').value = '';
+  collapseOrb();
+  send({ type: 'chat_send', target: 'glasses', payload: { messages: [{ role: 'user', content: text }] } });
+}
+$('orbSend').onclick = sendChat;
+$('orbInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChat(); });
+$('orbInput').addEventListener('input', () => {
+  $('orbSend').disabled = recording || !$('orbInput').value.trim();
+});
+
+// ── Orb 展开 / 收起 ──────────────────────────────────────────
+function expandOrb() { $('orb').classList.add('expanded'); setTimeout(() => $('orbInput').focus(), 220); }
+function collapseOrb() { $('orb').classList.remove('expanded'); }
+$('orbBall').onclick = (e) => {
+  e.stopPropagation();
+  if ($('orb').classList.contains('expanded')) collapseOrb(); else expandOrb();
+};
+// 点击舞台空白收起
+stage.addEventListener('click', (e) => {
+  if ($('orb').classList.contains('expanded') && !$('orbPanel').contains(e.target) && e.target !== $('orbBall')) {
+    collapseOrb();
+  }
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') collapseOrb();
+});
+
+// ── STT 配置（语音识别 LLM）——本地保存，API Key 加密 ──
+// 实时识别直连 provider，配置存在本设备 localStorage（{apiUrl, model, keyEnc}），
+// api_key 用 AES-256-GCM 加密（与桌面端 crypto.ts 同方案），不存明文。
+const STT_CFG_KEY = 'glasses-stt-config';
+let sttCfg = null;  // 运行时内存 {api_url, api_key, model}；刷新后从本地解密恢复
+
+function serverBase() {
+  const host = $('host').value.trim() || '127.0.0.1';
+  const port = $('port').value.trim() || '7017';
+  return `http://${host}:${port}`;
+}
+
+// ── 本地加密（WebCrypto：PBKDF2 + AES-256-GCM，同桌面端方案） ──
+const STT_KEY_PASSPHRASE = 'Ign.client.v1';
+async function deriveSttKey(salt) {
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(STT_KEY_PASSPHRASE), 'PBKDF2', false, ['deriveKey'],
+  );
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+    keyMaterial, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt'],
+  );
+}
+async function encryptSecret(plain) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await deriveSttKey(salt);
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(plain));
+  const buf = new Uint8Array(16 + 12 + ct.byteLength);
+  buf.set(salt, 0); buf.set(iv, 16); buf.set(new Uint8Array(ct), 28);
+  return btoa(String.fromCharCode(...buf));
+}
+async function decryptSecret(enc) {
+  try {
+    const buf = Uint8Array.from(atob(enc), c => c.charCodeAt(0));
+    const key = await deriveSttKey(buf.slice(0, 16));
+    const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: buf.slice(16, 28) }, key, buf.slice(28));
+    return new TextDecoder().decode(pt);
+  } catch { return ''; }
+}
+
+async function loadSttCfg() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(STT_CFG_KEY)) || {};
+    if (raw.apiUrl && raw.keyEnc) {
+      const key = await decryptSecret(raw.keyEnc);
+      sttCfg = key ? { api_url: raw.apiUrl, api_key: key, model: raw.model || 'whisper-1' } : null;
+    } else {
+      sttCfg = null;
+    }
+  } catch { sttCfg = null; }
+}
+
+function sttMsg(text, ok) {
+  $('sttMsg').textContent = text;
+  $('sttMsg').style.color = ok === undefined ? 'var(--muted)' : (ok ? 'var(--ok)' : 'var(--danger)');
+}
+async function openSttSettings() {
+  $('sttCard').classList.remove('hidden');
+  await loadSttCfg();
+  // Server 数据库为准（实时识别由 Server 读取），读不到再用本地缓存
+  const s = loadSettings();
+  try {
+    const res = await fetch(`http://${s.host || '127.0.0.1'}:${s.port || 7017}/Ign/v1/settings/info`);
+    const info = await res.json().catch(() => ({}));
+    if (res.ok && info.stt) {
+      $('sttUrl').value = info.stt.api_url || sttCfg?.api_url || '';
+      $('sttKey').value = info.stt.api_key || sttCfg?.api_key || '';
+      $('sttModel').value = info.stt.model || sttCfg?.model || '';
+      sttMsg('');
+      return;
+    }
+  } catch { /* Server 不可达 → 用本地缓存 */ }
+  $('sttUrl').value = sttCfg?.api_url || '';
+  $('sttKey').value = sttCfg?.api_key || '';
+  $('sttModel').value = sttCfg?.model || '';
+  sttMsg('');
+}
+async function saveSttSettings() {
+  const apiUrl = $('sttUrl').value.trim();
+  const apiKey = $('sttKey').value.trim();
+  const model = $('sttModel').value.trim();
+  sttMsg('保存中…');
+  try {
+    // 本地仍加密落盘（备用）
+    const keyEnc = apiKey ? await encryptSecret(apiKey) : '';
+    localStorage.setItem(STT_CFG_KEY, JSON.stringify({ apiUrl, model, keyEnc }));
+    await loadSttCfg();
+    // 同步 Server：存 DB settings 表 stt 键（与文本 LLM 同样保存方式，实时识别由 Server 读取）
+    const s = loadSettings();
+    const res = await fetch(`http://${s.host || '127.0.0.1'}:${s.port || 7017}/Ign/v1/settings`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(s.token ? { Authorization: `Bearer ${s.token}` } : {}),
+      },
+      body: JSON.stringify({ stt: { api_url: apiUrl, api_key: apiKey, model } }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `HTTP ${res.status}`);
+    }
+    sttMsg('已保存（Server 数据库 + 本设备）', true);
+  } catch (err) {
+    sttMsg(`保存失败: ${err.message}`, false);
+  }
+}
+$('btnSettings').onclick = openSttSettings;
+$('btnSttSave').onclick = saveSttSettings;
+$('btnSttClose').onclick = () => { $('sttCard').classList.add('hidden'); };
+
+// ── 语音输入（实时）：经 Server 中转连 STT provider ──
+// 链路：眼镜 ⇄ Server(/Ign/v1/speech/ws?token=JWT) ⇄ 百炼（Authorization 头）。
+// Server 读 DB 的 stt 配置发起 run-task；本端只推 PCM（task-started 前缓存）、
+// 收 provider 事件（task-started/result-generated/task-finished/task-failed 原样转发）、
+// 停止时发 {"type":"finish"}（Server 转成 finish-task 发 provider）。
+// 音频：AudioWorklet 采集，线性降采样到 16kHz / 16bit 单声道 PCM，边录边推。
+let recording = false;
+let sttWs = null;        // 到 Server 的语音 WS
+let sttStarted = false;  // 收到 task-started 后才允许推音频
+const sttSentences = new Map();  // sentence_id → 该句定稿文本
+let sttCurText = '';    // 当前句中间文本
+let sttStream = null;
+let sttAudioCtx = null;
+let sttBuffered = [];    // task-started 之前缓存的 PCM 帧
+const MAX_RECORD_MS = 8000;  // 最长 8 秒自动停止
+
+$('btnVoice').onclick = () => { if (recording) stopRecording(); else startRecording(); };
+
+async function startRecording() {
+  if (recording) return;
+  if (!navigator.mediaDevices?.getUserMedia || !window.AudioWorkletNode) {
+    orbHint('当前浏览器不支持录音');
+    return;
+  }
+  const s = loadSettings();
+  if (!s.token) { orbHint('未登录 Server，请先登录'); return; }
+  sttSentences.clear();
+  sttCurText = '';
+  sttStarted = false;
+  sttBuffered = [];
+  try {
+    sttStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch { orbHint('麦克风不可用'); return; }
+
+  recording = true;
+  $('orbSend').disabled = true;
+  $('orb').classList.add('listening');
+  orbHint('连接识别服务…');
+
+  // 经 Server 中转：JWT 走 query（浏览器 WS 不能带请求头）；
+  // run-task 由 Server 用 DB 里的 STT 配置发起，本端只推 PCM + 收事件
+  const host = s.host || '127.0.0.1';
+  const port = s.port || 7017;
+  const url = `ws://${host}:${port}/Ign/v1/speech/ws?token=${encodeURIComponent(s.token)}`;
+  sttWs = new WebSocket(url);
+  sttWs.onopen = () => {
+    orbHint('识别任务启动中…');
+  };
+  sttWs.onmessage = (ev) => {
+    let msg;
+    try { msg = JSON.parse(ev.data); } catch { return; }
+    if (msg.type === 'error') { finishWs(false, msg.message || '语音识别失败'); return; }
+    const event = msg.header?.event;
+    if (event === 'task-started') {
+      sttStarted = true;
+      orbHint('聆听中…（再次点击 🎤 结束）');
+      for (const buf of sttBuffered) sttWs.send(buf.buffer);
+      sttBuffered = [];
+      buildPcm16kNode(sttStream).catch(() => {});
+    } else if (event === 'result-generated') {
+      const s = msg.payload?.output?.sentence || {};
+      if (s.sentence_end) {            // 最终结果：该句定稿
+        if (s.text) sttSentences.set(s.sentence_id, s.text);
+        sttCurText = '';
+      } else {                         // 中间结果（sentence_end=false）
+        sttCurText = s.text || '';
+      }
+      const live = assembleSttText();  // 已定稿句子 + 当前句中间文本
+      if (live) {
+        $('orbInput').value = live;
+        $('orbInput').classList.add('live');
+        orbHint('识别中…（实时生成）');
+      }
+    } else if (event === 'task-finished') {
+      finishWs(true);
+    } else if (event === 'task-failed') {
+      console.debug('[stt] task-failed 完整事件:', msg);  // 诊断：error_code/task_id 定位是哪条消息被拒
+      finishWs(false, String(msg.header?.error_message || msg.header?.error_code || '识别失败'));
+    } else {
+      console.debug('[stt] 未处理事件:', msg);
+    }
+  };
+  sttWs.onerror = () => { if (recording) finishWs(false, '连接识别服务失败'); };
+  sttWs.onclose = () => { if (recording) finishWs(false, '识别服务连接中断'); };
+  setTimeout(() => { if (recording) stopRecording(); }, MAX_RECORD_MS);
+}
+
+function stopRecording() {
+  if (!recording) return;
+  // 先停麦：finish 之后不能再推 PCM（协议要求 finish-task 前音频已发完）
+  if (sttStream) { sttStream.getTracks().forEach(t => t.stop()); sttStream = null; }
+  if (sttWs && sttWs.readyState === WebSocket.OPEN) {
+    sttWs.send(JSON.stringify({ type: 'finish' }));
+    setTimeout(() => { if (recording) finishWs(true); }, 3000);  // 等 task-finished，超时强制收尾
+  } else {
+    finishWs(false, '识别服务未连接');
+  }
+}
+
+function assembleSttText() {
+  const ids = [...sttSentences.keys()].sort((a, b) => a - b);
+  return ids.map(id => sttSentences.get(id)).join('') + sttCurText;
+}
+
+function finishWs(ok, errMsg) {
+  recording = false;
+  $('orb').classList.remove('listening');
+  if (sttStream) { sttStream.getTracks().forEach(t => t.stop()); sttStream = null; }
+  if (sttAudioCtx) { sttAudioCtx.close().catch(() => {}); sttAudioCtx = null; }
+  if (sttWs) { try { sttWs.close(); } catch {} sttWs = null; }
+  sttStarted = false;
+  sttBuffered = [];
+  if (ok) {
+    const text = assembleSttText() || $('orbInput').value.trim();
+    if (!text) { orbHint('未识别到内容，请重试'); return; }
+    $('orbInput').value = text;
+    $('orbInput').classList.remove('live');
+    $('orbSend').disabled = false;
+    orbHint('识别完成，确认内容后点击发送');
+  } else {
+    $('orbInput').classList.remove('live');
+    orbHint(`识别失败: ${errMsg}`);
+  }
+}
+
+// 16kHz / 16bit 单声道 PCM 采集（线性降采样，边采边发）：
+//   优先 AudioWorklet（模块经 Blob 加载保持单文件）；file:// 打开时浏览器
+//   禁止加载 blob 模块 → 回退 ScriptProcessorNode（无需模块加载，file:// 可用）。
+async function buildPcm16kNode(stream) {
+  sttAudioCtx = new AudioContext();
+  const src = sttAudioCtx.createMediaStreamSource(stream);
+
+  // 路径 1：AudioWorklet（HTTP 页面正常走这里）
+  if (window.AudioWorkletNode) {
+    try {
+      const moduleSrc = `
+        class Pcm16k extends AudioWorkletProcessor {
+          process(inputs) {
+            const ch = inputs[0][0];
+            if (!ch || !ch.length) return true;
+            const ratio = sampleRate / 16000;
+            const outLen = Math.max(1, Math.floor(ch.length / ratio));
+            const out = new Float32Array(outLen);
+            for (let i = 0; i < outLen; i++) {
+              const pos = i * ratio;
+              const i0 = pos | 0;
+              const i1 = Math.min(i0 + 1, ch.length - 1);
+              const t = pos - i0;
+              out[i] = ch[i0] * (1 - t) + ch[i1] * t;
+            }
+            this.port.postMessage(out, [out.buffer]);
+            return true;
+          }
+        }
+        registerProcessor('pcm16k', Pcm16k);
+      `;
+      const blobUrl = URL.createObjectURL(new Blob([moduleSrc], { type: 'application/javascript' }));
+      await sttAudioCtx.audioWorklet.addModule(blobUrl);
+      const node = new AudioWorkletNode(sttAudioCtx, 'pcm16k');
+      node.port.onmessage = (e) => sendPcm(e.data);
+      src.connect(node);
+      return;
+    } catch { /* blob 模块被浏览器拦截（file://）→ 走回退 */ }
+  }
+
+  // 路径 2：ScriptProcessorNode 回退（同款线性降采样；需接 destination 才会持续回调）
+  const proc = sttAudioCtx.createScriptProcessor(4096, 1, 1);
+  proc.onaudioprocess = (e) => {
+    const ch = e.inputBuffer.getChannelData(0);
+    const ratio = sttAudioCtx.sampleRate / 16000;
+    const outLen = Math.max(1, Math.floor(ch.length / ratio));
+    const f32 = new Float32Array(outLen);
+    for (let i = 0; i < outLen; i++) {
+      const pos = i * ratio;
+      const i0 = pos | 0;
+      const i1 = Math.min(i0 + 1, ch.length - 1);
+      const t = pos - i0;
+      f32[i] = ch[i0] * (1 - t) + ch[i1] * t;
+    }
+    sendPcm(f32);
+  };
+  src.connect(proc);
+  proc.connect(sttAudioCtx.destination);
+}
+
+function sendPcm(f32) {
+  if (!sttWs || sttWs.readyState !== WebSocket.OPEN) return;
+  const i16 = new Int16Array(f32.length);
+  for (let i = 0; i < f32.length; i++) {
+    const s = Math.max(-1, Math.min(1, f32[i]));
+    i16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+  }
+  if (!sttStarted) { sttBuffered.push(i16); return; }
+  sttWs.send(i16.buffer);
+}
+
+function orbHint(text) { $('orbHint').textContent = text; }
+
+// ── 摄像头背景（失败静默） ──────────────────────────────────
+(function initCamera() {
+  if (!navigator.mediaDevices?.getUserMedia) return;
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
+    .then((stream) => { $('camFeed').srcObject = stream; $('camPlaceholder').style.display = 'none'; })
+    .catch(() => {});
+})();
+
+// 初始布局：无框 → 对话显示框全屏
+recomputeLayout();
+</script>
+</body>
+</html>

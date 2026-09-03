@@ -1,0 +1,44 @@
+/* ── ActionDot — close / minimize / settings button ────────────── */
+.action-dot {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: all 150ms var(--ease-out);
+}
+.action-dot--solid:hover {
+  transform: scale(1.15);
+  box-shadow: 0 0 10px var(--glow);
+}
+.action-dot--glasses {
+  background: var(--glasses-action-btn-bg);
+  border: 1px solid var(--glasses-action-btn-border);
+  position: relative;
+}
+/* Specular highlight — glass sphere reflection */
+.action-dot--glasses::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 4px;
+  height: 3px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.0);
+  transition: background 150ms var(--ease-out);
+  pointer-events: none;
+}
+.action-dot--glasses:hover {
+  transform: scale(1.15);
+  background: var(--glow);
+  border-color: transparent;
+  box-shadow: 0 0 10px var(--glow);
+}
+.action-dot--glasses:hover::after {
+  background: rgba(255, 255, 255, 0.7);
+}

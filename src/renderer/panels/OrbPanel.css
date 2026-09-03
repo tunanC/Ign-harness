@@ -1,0 +1,113 @@
+/* ═══════════════════════════════════════════════════════════════════
+   OrbPanel.css — Floating action orb
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Panel ───────────────────────────────────────────────────────── */
+
+.orb-panel {
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
+  z-index: 20;
+}
+
+/* ── Backdrop ────────────────────────────────────────────────────── */
+
+.orb-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+}
+
+/* ── Main Orb Button ─────────────────────────────────────────────── */
+
+.orb-btn {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  box-shadow: var(--glow-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+  position: relative;
+}
+
+.orb-btn:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 28px var(--accent-glow), 0 0 56px rgba(168, 85, 247, 0.16);
+  transform: scale(1.08);
+}
+
+.orb-btn--active {
+  border-color: var(--accent);
+  box-shadow: 0 0 28px var(--accent-glow);
+  transform: scale(1.08);
+}
+
+.orb-btn__icon {
+  color: var(--accent);
+  font-size: 20px;
+  line-height: 1;
+  transition: transform var(--duration-normal) var(--ease-out);
+}
+
+.orb-btn--active .orb-btn__icon {
+  transform: rotate(45deg);
+  color: var(--danger);
+}
+
+/* ── Radial Menu ─────────────────────────────────────────────────── */
+
+.orb-menu {
+  position: absolute;
+  bottom: 64px;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.orb-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-default);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--duration-fast) var(--ease-out);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 0 16px rgba(0, 0, 0, 0.4);
+  animation: orbItemIn 0.2s var(--ease-out) both;
+}
+
+@keyframes orbItemIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.9); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.orb-menu__item:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 20px var(--accent-glow);
+  color: var(--text-primary);
+}
+
+.orb-menu__icon {
+  font-size: 14px;
+  width: 18px;
+  text-align: center;
+}
+
+.orb-menu__label {
+  letter-spacing: 0.06em;
+}

@@ -1,0 +1,48 @@
+{
+  "identifier": "default",
+  "description": "Capability for the main windows",
+  "windows": ["settings", "main", "orb", "login"],
+  "permissions": [
+    "core:default",
+    "core:webview:allow-create-webview-window",
+    "core:window:allow-minimize",
+    "core:window:allow-unminimize",
+    "core:window:allow-toggle-maximize",
+    "core:window:allow-close",
+    "core:window:allow-show",
+    "core:window:allow-hide",
+    "core:window:allow-set-focus",
+    "core:window:allow-center",
+    "core:window:allow-set-always-on-top",
+    "core:window:allow-set-position",
+    "core:window:allow-set-size",
+    "core:window:allow-current-monitor",
+    "global-shortcut:allow-register",
+    "global-shortcut:allow-unregister",
+
+    {
+      "identifier": "fs:allow-exists",
+      "allow": [
+        { "path": "$RESOURCE/conf/settings.json" }
+      ]
+    },
+    {
+      "identifier": "fs:allow-read-text-file",
+      "allow": [
+        { "path": "$RESOURCE/conf/settings.json" }
+      ]
+    },
+    {
+      "identifier": "fs:allow-write-text-file",
+      "allow": [
+        { "path": "$RESOURCE/conf/settings.json" }
+      ]
+    },
+    {
+      "identifier": "fs:allow-mkdir",
+      "allow": [
+        { "path": "$RESOURCE/conf" }
+      ]
+    }
+  ]
+}

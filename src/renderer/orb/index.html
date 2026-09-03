@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' ipc: https://tauri.localhost http://tauri.localhost http://ipc.localhost;" />
+    <title>Orb</title>
+    <style>
+      /* orb-specific overrides */
+      html  { background: transparent;   }
+      body  { background: transparent; pointer-events: none;   }
+      #root {
+        position: absolute;
+        left: 30px; top: 30px;
+        width: 0; height: 0;
+        overflow: visible;
+      }
+      #root-dock {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+        pointer-events: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <div id="root-dock"></div>
+    <script type="module" src="./index.tsx"></script>
+  </body>
+</html>

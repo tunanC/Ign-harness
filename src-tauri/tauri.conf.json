@@ -1,0 +1,19 @@
+{
+  "$schema": "https://raw.githubusercontent.com/tauri-apps/tauri/dev/crates/tauri-cli/schema.json",
+  "productName": "Ign",
+  "version": "1.0.0",
+  "identifier": "com.ign.client",
+  "build": {
+    "frontendDist": "../dist/renderer",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "pnpm dev",
+    "beforeBuildCommand": "pnpm build"
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "windows": [],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' http://127.0.0.1:* ws://127.0.0.1:* ipc: https://tauri.localhost http://tauri.localhost"
+    }
+  }
+}

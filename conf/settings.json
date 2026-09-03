@@ -1,0 +1,15 @@
+{
+  "server": {
+    "host": "127.0.0.1",
+    "port": 7017
+  },
+  "clientVersion": "1.0.0",
+  "theme": "dark",
+  "setupCompleted": false,
+  "loginCompleted": false,
+  "username": "",
+  "authToken": "",
+  "password": "",
+  "rememberPassword": false,
+  "autoLogin": false
+}

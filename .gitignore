@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+
+# Build output
+dist/
+
+# Rust build artifacts
+src-tauri/target/
+src-tauri/gen/
+
+# Logs
+*.log
+*.err
+
+# Runtime data (simulated user install directory)
+runtime/data/*.db
+runtime/data/*.db-journal
+runtime/data/*.db-wal
+backend/data/
+
+# Runtime databases (live data, never commit)
+*.db
+*.db-shm
+*.db-wal
+runtime/app.db*
+deploy/dev/data/*
+!deploy/dev/data/.gitignore
+
+# IDE
+.idea/
+*.iml
+
+# Local agent config
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db

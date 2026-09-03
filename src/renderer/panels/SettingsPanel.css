@@ -1,0 +1,365 @@
+/* ═══════════════════════════════════════════════════════════════════
+   SettingsPanel.css — Cyberpunk settings page styles
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Layout ──────────────────────────────────────────────────────── */
+
+.settings-page {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  background: transparent;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px;
+  position: relative;
+  z-index: 1;
+}
+
+.settings-container {
+  width: 100%;
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin: 0 auto;
+  animation: settingsEnter 0.5s var(--ease-out);
+}
+
+@keyframes settingsEnter {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Header ──────────────────────────────────────────────────────── */
+
+.settings-header {
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.settings-header h1 {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-2xl);
+  font-weight: 400;
+  color: var(--accent);
+  text-shadow: 0 0 24px var(--accent-glow);
+  letter-spacing: 0.06em;
+  margin-bottom: 4px;
+}
+
+.settings-header p {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+
+/* ── Form Row ────────────────────────────────────────────────────── */
+
+.form-row {
+  display: flex;
+  gap: 12px;
+}
+
+.form-row > * {
+  flex: 1;
+}
+
+/* ── Form Group ──────────────────────────────────────────────────── */
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-label {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.form-label .label-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent-glow);
+}
+
+/* ── Input ───────────────────────────────────────────────────────── */
+
+.form-input {
+  width: 100%;
+  padding: 9px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  transition: border-color var(--duration-fast) var(--ease-out),
+              box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.form-input::placeholder {
+  color: var(--text-muted);
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 12px var(--accent-glow);
+}
+
+.form-input:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── Button ──────────────────────────────────────────────────────── */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 20px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+  white-space: nowrap;
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--bg-hover);
+  box-shadow: 0 0 16px var(--accent-glow);
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn--primary {
+  background: var(--accent);
+  color: #050510;
+  border-color: var(--accent);
+  font-weight: 500;
+}
+
+.btn--primary:hover:not(:disabled) {
+  background: var(--accent);
+  box-shadow: 0 0 24px var(--accent-glow);
+}
+
+.btn--danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.btn--danger:hover:not(:disabled) {
+  border-color: var(--danger);
+  box-shadow: 0 0 16px rgba(255, 77, 106, 0.25);
+}
+
+.btn--sm {
+  padding: 5px 12px;
+  font-size: var(--font-size-xs);
+}
+
+.btn--block {
+  width: 100%;
+}
+
+.btn--lg {
+  padding: 12px 28px;
+  font-size: var(--font-size-base);
+  border-radius: var(--radius-lg);
+}
+
+/* ── Status Badge ────────────────────────────────────────────────── */
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  border: 1px solid var(--border-default);
+}
+
+.status-badge--ok {
+  color: var(--success);
+  border-color: var(--success);
+}
+
+.status-badge--warn {
+  color: var(--warning);
+  border-color: var(--warning);
+}
+
+.status-badge--error {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.status-badge--info {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 6px currentColor;
+}
+
+/* ── Health Row ──────────────────────────────────────────────────── */
+
+.health-row {
+  display: flex;
+  gap: 16px;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+.health-indicator {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* ── Test Result ─────────────────────────────────────────────────── */
+
+.test-result {
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+}
+
+.test-result--ok {
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.test-result--fail {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+/* ── License Status ──────────────────────────────────────────────── */
+
+.license-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--bg-input);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+}
+
+.license-detail {
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  margin-top: 6px;
+}
+
+.machine-code {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  padding: 6px 10px;
+  background: var(--bg-input);
+  border-radius: var(--radius-sm);
+  word-break: break-all;
+  margin-top: 6px;
+}
+
+/* ── Footer ──────────────────────────────────────────────────────── */
+
+.settings-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding-top: 8px;
+}
+
+.settings-footer .hint {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+/* ── Readonly info display ────────────────────────────────────────── */
+
+.info-readonly {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.info-label {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.info-value {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+}
+
+/* ── Error banner ─────────────────────────────────────────────────── */
+
+.error-banner {
+  padding: 10px 16px;
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-md);
+  color: var(--danger);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-mono);
+  background: rgba(255, 77, 106, 0.08);
+}

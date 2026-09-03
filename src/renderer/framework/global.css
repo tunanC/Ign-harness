@@ -1,0 +1,84 @@
+/* global.css */
+
+@import './theme.css';
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html {
+  width: 100%; height: 100%;
+  background: transparent;
+}
+
+body {
+  width: 100%; height: 100%;
+  margin: 0; padding: 0;
+  background: transparent;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  user-select: none;
+}
+
+#base-root {
+  display: flex;
+  flex-direction: column;
+  width: 100%; height: 100%;
+}
+
+/* ── Window layout: inset 30px (all windows) ──────────────────── */
+.layout--inset {
+  overflow: hidden;
+}
+.layout--inset #base-root {
+  width: calc(100% - 60px);
+  height: calc(100% - 60px);
+  margin: 30px;
+  overflow: hidden;
+  border-radius: 12px;
+}
+
+/* ── Surface: solid (Settings, Login) ────────────────────────── */
+.surface--solid #base-root {
+  background: var(--bg-deep);
+  box-shadow: var(--shadow-root);
+}
+
+/* ── Surface: glasses (Main) ─────────────────────────────────── */
+.surface--glasses #base-root {
+  background: var(--glasses-panel-bg);
+  backdrop-filter: blur(16px);
+  border-left: 1px solid var(--glasses-border);
+  border-top: 1px solid var(--glasses-border);
+  border-right: none;
+  border-bottom: none;
+  box-shadow: var(--glasses-shadow);
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 10px; margin: 4px 0; }
+::-webkit-scrollbar-thumb { background: rgba(0, 229, 255, 0.25); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent); opacity: 0.5; box-shadow: 0 0 8px var(--accent-glow); }
+
+/* ── Tooltip popup (rendered via portal to avoid overflow clipping) ── */
+.tooltip-popup {
+  animation: tooltip-in 100ms var(--ease-out);
+}
+@keyframes tooltip-in { from { opacity: 0; } to { opacity: 1; } }
+
+.tooltip-popup--solid {
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+}
+
+.tooltip-popup--glasses {
+  background: var(--glasses-panel-bg);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--glasses-border);
+  color: var(--glasses-input-text);
+}
+
+::selection { background: var(--accent-strong); color: var(--text-primary); }
+:focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; }

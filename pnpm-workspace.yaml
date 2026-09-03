@@ -1,0 +1,7 @@
+allowBuilds:
+  esbuild: true
+# pnpm 10+ 默认拦截依赖的安装脚本（postinstall），需要明确批准。
+# esbuild 的脚本只是回退兜底（二进制走 @esbuild/win32-x64 平台包），
+# 但不批准会导致 pnpm install/exec/run 报错退出。
+onlyBuiltDependencies:
+  - esbuild
