@@ -95,9 +95,11 @@ deploy/           # Deployment scripts
 
 ## What's missing (the honest list)
 
+- **PE engine**: the full patented PE engine is not yet reflected in this project — the current PE is a generic implementation
 - **Security module**: the demo has no sandbox and no permission control. Server-side tools execute directly on your machine — `write_file` can write to any path
 - **Execution trace**: none. There is no record of what ran and why
 - **Memory system**: nothing persists across sessions; it will not remember you
+- **Context compression**: temporary context is not compressed yet. Tech enthusiasts, please be aware — protect your token usage (^_<)
 - **Approval/permissions**: no second confirmation for high-risk actions. Hooks are the intended mechanism and the wiring is pre-reserved — just annotate the required hooks in each capability's md file and implement the corresponding hook code
 - Production stability: no stress testing, no security review. Please use it on your LAN; the production version will include security-related modules
 
