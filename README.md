@@ -8,6 +8,8 @@ In one sentence: a single Server is the brain; your PC, glasses, and phone are t
 
 > ⚠️ This is a demo, not a product. There is no security module, no execution trace, and no memory system. Please read the [honest list of what is missing](#whats-missing-the-honest-list) first.
 
+> ⚠️ The code is currently in a rough state and exists purely to verify feasibility — it is a feasibility prototype, not production-quality.
+
 > 📌 This repository is the official open-source demo code of **Ign**. The production release will use a separate product name; the repository name is only an open-source demo codename. The production version will be released through the official website: **(TBD)**. This repository does not promise to stay in sync with the production version; refer to the official website for the production release.
 
 ## What it can do
@@ -50,6 +52,8 @@ pip install -r backend/requirements.txt
 On first launch the database is empty with no preset accounts: the username and password entered when a Client logs in are automatically registered as the first admin account.
 
 **2. Start the desktop client** (repo root):
+
+> ⚠️ The desktop client currently supports **Windows** only; macOS is not adapted yet.
 
 ```powershell
 pnpm install
