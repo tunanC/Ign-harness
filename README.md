@@ -10,8 +10,6 @@ In one sentence: a single Server is the brain; your PC, glasses, and phone are t
 
 > ⚠️ The code is currently in a rough state and exists purely to verify feasibility — it is a feasibility prototype, not production-quality.
 
-> 📌 This repository is the official open-source demo code of **Ign**. The production release will use a separate product name; the repository name is only an open-source demo codename. The production version will be released through the official website: **(TBD)**. This repository does not promise to stay in sync with the production version; refer to the official website for the production release.
-
 ## What it can do
 
 - Natural-language chat (plain chat, with multi-turn context)
@@ -105,7 +103,7 @@ deploy/           # Deployment scripts
 - **Memory system**: nothing persists across sessions; it will not remember you
 - **Context compression**: temporary context is not compressed yet. Tech enthusiasts, please be aware — protect your token usage (^_<)
 - **Approval/permissions**: no second confirmation for high-risk actions. Hooks are the intended mechanism and the wiring is pre-reserved — just annotate the required hooks in each capability's md file and implement the corresponding hook code
-- Production stability: no stress testing, no security review. Please use it on your LAN; the production version will include security-related modules
+- Production stability: no stress testing, no security review. Please use it on your LAN, or add security-related modules yourself
 
 **Do not expose it to the public internet.** It listens on 127.0.0.1 by default. If you bind it to 0.0.0.0, add a security layer yourself first.
 
@@ -121,7 +119,7 @@ deploy/           # Deployment scripts
 This repository is licensed under the **Ign Noncommercial License 1.0** (a modified version of the PolyForm Noncommercial License 1.0.0):
 
 - **Free for noncommercial use**: personal research, experimentation, learning, private entertainment, hobby projects, and use by charitable, educational (public or private), public safety & health, and environmental organizations are all within the free license scope
-- **No license for government, research institutions, and SOEs**: government bodies, agencies, departments, and institutions at any level, research organizations, and state-owned enterprises (including central and local SOEs) are granted no license of any kind under this license and must purchase the official enterprise version — public universities and public charitable institutions are not subject to this restriction
+- **No license for government, research institutions, and SOEs**: government bodies, agencies, departments, and institutions at any level, research organizations, and state-owned enterprises (including central and local SOEs) are granted no license of any kind under this license. Public universities and public charitable institutions are not subject to this restriction
 - **Commercial use prohibited**: use by any commercial entity or for any commercial purpose is outside the scope of this license and requires a separate commercial license
 - **No conversion mechanism**: this version is permanently subject to this license
 
