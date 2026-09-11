@@ -2,9 +2,15 @@
 
 [简体中文](./README.zh-CN.md) | English
 
+> This repository is the official open-source demo code of Ign. The official release will be published through the official site under an independent product name; this repository name is only a demo codename, and this repository is not promised to stay in sync with the official release.
+
 A cross-device personal AI assistant (**demo**).
 
 In one sentence: a single Server is the brain; your PC, glasses, and phone are the hands and feet. Say a word on any device — the Server plans, dispatches tools to the right device for execution, and aggregates the results back.
+
+Today's AIs are trapped inside products. The AI in your chat app doesn't know the code you wrote; the AI in your editor doesn't know your schedule — they don't even know each other, and none of them knows all of you. Meanwhile, the devices around you keep multiplying: phone, watch, glasses, car. The road of "stuffing an AI into every device" is doomed.
+
+Ign answers with one sentence: take the AI out of the products, and put it into your own Server. **There is only one AI — it lives at your hub; all your devices are its body.**
 
 > ⚠️ This is a demo, not a product. There is no security module, no execution trace, and no memory system. Please read the [honest list of what is missing](#whats-missing-the-honest-list) first.
 
@@ -18,6 +24,13 @@ In one sentence: a single Server is the brain; your PC, glasses, and phone are t
 - **Declarative capability protocol**: add a folder = add a capability (see below)
 - Glasses simulator (`glasses/simulator` — open in a browser, login included)
 - Speech recognition relay (the Server relays to an STT provider, bidirectional forwarding)
+
+## Why it's designed this way
+
+1. **Sessions follow you, not the device.** Conversation, context, and ongoing work all live on the Server — never inside a device. Glasses die mid-task? The session doesn't. Come back on another device and pick up where you left off.
+2. **A folder is a capability.** No SDK integration to write — capabilities are declarative (a folder + an md + an entry function), and the LLM plans directly against the manifest scanned at startup. Add a folder and restart: one new capability. One day, one folder will be one distributable app.
+3. **One protocol, both ends.** The same protocol reads files on the Server, snaps photos on the glasses, and drives apps on the PC. The LLM never needs to care where a tool actually runs.
+4. **The frontend touches no files.** The UI is a pure renderer — it reads nothing and writes nothing; all data flows through your Server. This is not a shortcut, it's a stance: the AI is the hub, not a plugin inside some app.
 
 ## Architecture
 
@@ -95,6 +108,17 @@ glasses/          # Glasses simulator
 deploy/           # Deployment scripts
 ```
 
+## Where this is going
+
+**This section is vision, not the current state — for what exists today, see the honest list right below.**
+
+What Ign proves today is small: one sentence, and your devices work together on a task. But the problem it points at is much bigger:
+
+- **An AI that knows you** — cross-device memory: whichever device you pick up, it remembers who you are and what you've said. A companion for life, not a Q&A box
+- **Said once, done exactly once** — concurrency safety down to "execute at most once": a task you entrust is never executed twice
+- **AI talking to AI** — Servers recognize and connect to one another; your AI delegates tasks to someone else's AI, the way people ask friends for help
+- **Every new device is a new organ** — glasses, in-car systems, tomorrow's robots: plug into the hub, become part of the same AI
+
 ## What's missing (the honest list)
 
 - **PE engine**: the full patented PE engine is not yet reflected in this project — the current PE is a generic implementation
@@ -113,6 +137,8 @@ deploy/           # Deployment scripts
 - Cross-device memory
 - Execution trace
 - Security sandbox + permission system
+
+These four are the first footprints toward the official release (v1), which will be published through the official site under an independent product name.
 
 ## License
 
