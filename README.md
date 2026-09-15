@@ -1,12 +1,19 @@
 # Ign
 
+**Cross-device personal AI — one brain on your Server, every device is its body.**
+
 [简体中文](./README.zh-CN.md) | English
 
-> This repository is the official open-source demo code of Ign. The official release will be published through the official site under an independent product name; this repository name is only a demo codename, and this repository is not promised to stay in sync with the official release.
-
-A cross-device personal AI assistant (**demo**).
-
 In one sentence: a single Server is the brain; your PC, glasses, and phone are the hands and feet. Say a word on any device — the Server plans, dispatches tools to the right device for execution, and aggregates the results back.
+
+- **Chat** in plain language, with multi-turn context
+- **Plan-Execute (PE) engine** — the LLM plans a task, invokes capabilities one by one, aggregates results
+- **Cross-device routing** — tools run on the device that fits them (glasses, PC, …), not on the Server
+- **Declarative capabilities** — add a folder = add a capability
+
+Full feature list: [What it can do](#what-it-can-do)
+
+> This repository is the official open-source demo code of Ign. The official release will be published through the official site under an independent product name; this repository name is only a demo codename, and this repository is not promised to stay in sync with the official release.
 
 Today's AIs are trapped inside products. The AI in your chat app doesn't know the code you wrote; the AI in your editor doesn't know your schedule — they don't even know each other, and none of them knows all of you. Meanwhile, the devices around you keep multiplying: phone, watch, glasses, car. The road of "stuffing an AI into every device" is doomed.
 
