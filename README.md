@@ -4,18 +4,18 @@
 
 [简体中文](./README.zh-CN.md) | English
 
-In one sentence: a single Server is the brain; your PC, glasses, and phone are the hands and feet. Say a word on any device — the Server plans, dispatches tools to the right device for execution, and aggregates the results back.
+In one sentence: a single Server is the brain; your PC, glasses, phone, robots, and more are the hands and feet. Say a word on any device — the Server plans, dispatches tools to the right device for execution, and aggregates the results back.
 
 - **Chat** in plain language, with multi-turn context
 - **Plan-Execute (PE) engine** — the LLM plans a task, invokes capabilities one by one, aggregates results
-- **Cross-device routing** — tools run on the device that fits them (glasses, PC, …), not on the Server
+- **Cross-device routing** — tools run on the device that fits them (glasses, PC, robots, …), not on the Server
 - **Declarative capabilities** — add a folder = add a capability
 
 Full feature list: [What it can do](#what-it-can-do)
 
 > This repository is the official open-source demo code of Ign. The official release will be published through the official site under an independent product name; this repository name is only a demo codename, and this repository is not promised to stay in sync with the official release.
 
-Today's AIs are trapped inside products. The AI in your chat app doesn't know the code you wrote; the AI in your editor doesn't know your schedule — they don't even know each other, and none of them knows all of you. Meanwhile, the devices around you keep multiplying: phone, watch, glasses, car. The road of "stuffing an AI into every device" is doomed.
+Today's AIs are trapped inside products. The AI in your chat app doesn't know the code you wrote; the AI in your editor doesn't know your schedule — they don't even know each other, and none of them knows all of you. Meanwhile, the devices around you keep multiplying: phone, watch, glasses, car, robots. The road of "stuffing an AI into every device" is doomed.
 
 Ign answers with one sentence: take the AI out of the products, and put it into your own Server. **There is only one AI — it lives at your hub; all your devices are its body.**
 
@@ -27,7 +27,7 @@ Ign answers with one sentence: take the AI out of the products, and put it into 
 
 - Natural-language chat (plain chat, with multi-turn context)
 - **Plan-Execute (PE) engine**: the LLM breaks a task into a plan, invokes capabilities one by one, and aggregates the results
-- **Cross-device routing**: tools do not execute on the Server — they are dispatched to the right client by device type (glasses, PC, ...) and the results are sent back
+- **Cross-device routing**: tools do not execute on the Server — they are dispatched to the right client by device type (glasses, PC, robots, ...) and the results are sent back
 - **Declarative capability protocol**: add a folder = add a capability (see below)
 - Glasses simulator (`glasses/simulator` — open in a browser, login included)
 - Speech recognition relay (the Server relays to an STT provider, bidirectional forwarding)
@@ -36,13 +36,13 @@ Ign answers with one sentence: take the AI out of the products, and put it into 
 
 1. **Sessions follow you, not the device.** Conversation, context, and ongoing work all live on the Server — never inside a device. Glasses die mid-task? The session doesn't. Come back on another device and pick up where you left off.
 2. **A folder is a capability.** No SDK integration to write — capabilities are declarative (a folder + an md + an entry function), and the LLM plans directly against the manifest scanned at startup. Add a folder and restart: one new capability. One day, one folder will be one distributable app.
-3. **One protocol, both ends.** The same protocol reads files on the Server, snaps photos on the glasses, and drives apps on the PC. The LLM never needs to care where a tool actually runs.
+3. **One protocol, both ends.** The same protocol reads files on the Server, snaps photos on the glasses, drives apps on the PC, and commands robots. The LLM never needs to care where a tool actually runs.
 4. **The frontend touches no files.** The UI is a pure renderer — it reads nothing and writes nothing; all data flows through your Server. This is not a shortcut, it's a stance: the AI is the hub, not a plugin inside some app.
 
 ## Architecture
 
 ```
-PC / Glasses / Phone (clients)
+PC / Glasses / Phone / Robots /... (clients)
         │  HTTP + WebSocket
         ▼
    Ign Server (Python FastAPI + SQLite)
@@ -162,5 +162,5 @@ Note: the patent license attached to this license only covers uses within its pe
 
 ## FAQ
 
-- **Why are Server and Client separate?** Because devices (glasses/phone/in-car systems) have limited compute. A single Server does the thinking; devices only execute and interact.
+- **Why are Server and Client separate?** Because devices (glasses/phone/in-car systems/robots/...) have limited compute. A single Server does the thinking; devices only execute and interact.
 - **Why do tools live on the Server?** Capabilities execute on the Server (reading/writing files, calling APIs). Those that must run on a device (camera on glasses, app control on the PC) are transmitted through the protocol's `tool_exec`, `action` fields — one protocol, different locations. `tool_exec`, `action` are controlled by the LLM and can push anything you can push.
