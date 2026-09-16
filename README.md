@@ -2,6 +2,8 @@
 
 **Cross-device personal AI — one brain on your Server, every device is its body.**
 
+**Always within reach; only yours to read — any device, any time, every byte of data staying on your Server and out of everyone else's reach, ours included.**
+
 [简体中文](./README.zh-CN.md) | English
 
 In one sentence: a single Server is the brain; your PC, glasses, phone, robots, and more are the hands and feet. Say a word on any device — the Server plans, dispatches tools to the right device for execution, and aggregates the results back.
